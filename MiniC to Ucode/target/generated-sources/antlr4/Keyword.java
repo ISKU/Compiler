@@ -10,8 +10,9 @@ public class Keyword {
 	public static final String SPACE9 = "         ";
 	public static final String SPACE10 = "          ";
 	public static final String SPACE11 = "           ";
-	public static final String[] SPACE = new String[] { "", SPACE1, SPACE2, SPACE3, SPACE4, SPACE5, SPACE6, SPACE7,
-			SPACE8, SPACE9, SPACE10, SPACE11 };
+	
+	public static final String[] SPACE = new String[] 
+			{ "", SPACE1, SPACE2, SPACE3, SPACE4, SPACE5, SPACE6, SPACE7, SPACE8, SPACE9, SPACE10, SPACE11 };
 
 	public static final String SYM = "           sym ";
 	public static final String LDC = "           ldc ";
