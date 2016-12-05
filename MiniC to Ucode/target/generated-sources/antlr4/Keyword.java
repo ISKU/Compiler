@@ -28,7 +28,7 @@ public class Keyword {
 	public static final String STI = "           sti";
 	public static final String LDI = "           ldi";
 	
-	public static final String LDP = "           ldp\n";
+	public static final String LDP = "           ldp";
 	public static final String RET = "           ret";
 	public static final String RETV = "           retv";
 	public static final String END = "           end";
@@ -55,7 +55,7 @@ public class Keyword {
 	public static final String PROC = "proc ";
 	public static final String NOP = "nop";
 
-	public static final String UNDEFINED = "undefined";
+	public static final String MAIN = "main";
 	public static final String WHILE = "while";
 	public static final String WHILEOUT = "wout";
 	public static final String IF = "if";
