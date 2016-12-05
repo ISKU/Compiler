@@ -25,6 +25,7 @@ public class UCodeGenListener extends MiniCBaseListener {
 	private int var_decls = 0; // the number of 'var_decl'
 	private int whiles = 0; // the number of 'while' keywords
 	private int ifs = 0; // the number of 'if' keywords
+	private boolean hasReturnStatement = false; // if a function has the return type void
 
 	public UCodeGenListener() {
 		super();
@@ -128,8 +129,10 @@ public class UCodeGenListener extends MiniCBaseListener {
 			.append(Keyword.PROC).append(localVariables).append(" 2").append(" 2\n");
 		line.append(newTexts.get(ctx.params()));
 		line.append(newTexts.get(ctx.compound_stmt()));
+		line.append(hasReturnStatement ? "" : Keyword.RET + "\n");
 		line.append(Keyword.END).append("\n");
 		
+		hasReturnStatement = false;
 		newTexts.put(ctx, line.toString());
 	}
 
@@ -448,6 +451,7 @@ public class UCodeGenListener extends MiniCBaseListener {
 			line.append(Keyword.RETV).append("\n");
 		}
 
+		hasReturnStatement = true;
 		newTexts.put(ctx, line.toString());
 	}
 	
