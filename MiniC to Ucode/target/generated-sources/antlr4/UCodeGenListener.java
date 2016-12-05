@@ -1,4 +1,4 @@
-import org.antlr.v4.runtime.ParserRuleContext;
+ï»¿import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeProperty;
 import java.util.ArrayList;
@@ -8,19 +8,19 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 
 /**
- * MiniC to U Code Compiler 201201356 ±è¹ÎÈ£
- * 
+ * MiniC to U Code Compiler 
+ * 201201356 ê¹€ë¯¼í˜¸
  * @author KMH
  */
 public class UCodeGenListener extends MiniCBaseListener {
 
-	private ParseTreeProperty<String> newTexts = new ParseTreeProperty<String>();
-	private ArrayList<Hashtable<String, Integer>> variables = new ArrayList<Hashtable<String, Integer>>();
-	private Hashtable<String, Integer> functions = new Hashtable<String, Integer>();
+	private ParseTreeProperty<String> newTexts;
+	private ArrayList<Hashtable<String, Integer>> variables; // hashtable(variable name, location)
+	private Hashtable<String, Integer> functions; // hashtable(function name, function number)
 
-	private int globalVariables = 0;
-	private int localVariables = 0;
-	private int functionNumber = 0;
+	private int globalVariables = 0; // the number of global variables
+	private int localVariables = 0; // the number of local variables of each function
+	private int functionNumber = 0; // the number of functions
 
 	private int var_decls = 0; // the number of 'var_decl'
 	private int whiles = 0; // the number of 'while' keywords
@@ -28,6 +28,10 @@ public class UCodeGenListener extends MiniCBaseListener {
 
 	public UCodeGenListener() {
 		super();
+		newTexts = new ParseTreeProperty<String>();
+		variables= new ArrayList<Hashtable<String, Integer>>();
+		functions = new Hashtable<String, Integer>();
+		
 		variables.add(new Hashtable<String, Integer>()); // global variables
 	}
 
@@ -49,7 +53,8 @@ public class UCodeGenListener extends MiniCBaseListener {
 		line.append(Keyword.CALL).append("main").append("\n");
 		line.append(Keyword.END).append("\n");
 
-		System.out.print(line.toString()); // Compilation Complete
+		// Compilation Complete
+		System.out.print(line.toString());
 		try {
 			BufferedWriter writer = new BufferedWriter(new FileWriter("test.uco"));
 			writer.write(line.toString());
@@ -96,6 +101,7 @@ public class UCodeGenListener extends MiniCBaseListener {
 			++globalVariables;
 
 			line.append(Keyword.SYM).append("1 ").append(globalVariables + " ").append(arraySize);
+			variables.get(0).put(arrayName, globalVariables);
 			for (int index = 0; index < arraySize; index++)
 				variables.get(0).put(arrayName + "[" + index + "]", globalVariables++);
 			globalVariables--;
@@ -116,14 +122,12 @@ public class UCodeGenListener extends MiniCBaseListener {
 		StringBuilder line = new StringBuilder();
 		String functionName = ctx.IDENT().getText();
 
-		line.append(functionName).append(Keyword.SPACE[indentation(functionName)]).append(Keyword.PROC)
-				.append(localVariables).append(" 2").append(" 2\n");
-
+		line.append(functionName).append(Keyword.SPACE[indentation(functionName)])
+			.append(Keyword.PROC).append(localVariables).append(" 2").append(" 2\n");
 		line.append(newTexts.get(ctx.params()));
-
 		line.append(newTexts.get(ctx.compound_stmt()));
-
 		line.append(Keyword.END);
+		
 		newTexts.put(ctx, line.toString());
 	}
 
@@ -138,11 +142,23 @@ public class UCodeGenListener extends MiniCBaseListener {
 	@Override
 	public void exitParam(MiniCParser.ParamContext ctx) {
 		StringBuilder line = new StringBuilder();
-		
-		line.append(Keyword.SYM).append("2 ").append(++localVariables).append(" 1").append("\n");
-		line.append(Keyword.STR).append("2 ").append(localVariables);
-		variables.get(functionNumber).put(ctx.IDENT().getText(), localVariables);
-		
+
+		// type_spec IDENT
+		if (ctx.getChildCount() == 2) {
+			++localVariables;
+			line.append(Keyword.SYM).append("2 ").append(localVariables).append(" 1").append("\n");
+			line.append(Keyword.STR).append("2 ").append(localVariables);
+			variables.get(functionNumber).put(ctx.IDENT().getText(), localVariables);
+		}
+
+		// type_spec IDENT '[' ']'
+		if (ctx.getChildCount() == 4) {
+			++localVariables;
+			line.append(Keyword.SYM).append("2 ").append(localVariables).append(" 1").append("\n");
+			line.append(Keyword.STR).append("2 ").append(localVariables);
+			variables.get(functionNumber).put(ctx.IDENT().getText(), localVariables);
+		}
+
 		newTexts.put(ctx, line.toString());
 	}
 
@@ -188,6 +204,7 @@ public class UCodeGenListener extends MiniCBaseListener {
 			++localVariables;
 
 			line.append(Keyword.SYM).append("2 ").append(localVariables + " ").append(arraySize);
+			variables.get(functionNumber).put(arrayName, localVariables);
 			for (int index = 0; index < arraySize; index++)
 				variables.get(functionNumber).put(arrayName + "[" + index + "]", localVariables++);
 			localVariables--;
@@ -209,6 +226,7 @@ public class UCodeGenListener extends MiniCBaseListener {
 	@Override
 	public void exitExpr(MiniCParser.ExprContext ctx) {
 		StringBuilder line = new StringBuilder();
+		
 		if (isAssignmentOperation(ctx)) { // IDENT '=' expr
 			String name = ctx.IDENT().getText();
 			int location = findVariableLocation(name);
@@ -216,7 +234,8 @@ public class UCodeGenListener extends MiniCBaseListener {
 
 			line.append(newTexts.get(ctx.expr(0))).append(isFunctionOperation(ctx.getChild(2)) ? "\n" : "");
 			line.append(Keyword.STR).append(location + " ").append(sequence);
-		} else if (isArrayAssignmentOperation(ctx)) { // IDENT '[' expr ']' '=' // expr
+		} 
+		else if (isArrayAssignmentOperation(ctx)) { // IDENT '[' expr ']' '=' expr
 			String name = ctx.IDENT().getText() + "[0]";
 			int location = findVariableLocation(name);
 			int sequence = variables.get((location == 1) ? 0 : functionNumber).get(name);
@@ -230,7 +249,8 @@ public class UCodeGenListener extends MiniCBaseListener {
 			// assign
 			line.append(newTexts.get(ctx.expr(1)));
 			line.append(Keyword.STI);
-		} else if (isArrayOperation(ctx)) { // IDENT '[' expr ']'
+		}
+		else if (isArrayOperation(ctx)) { // IDENT '[' expr ']'
 			String name = ctx.IDENT().getText() + "[0]";
 			int location = findVariableLocation(name);
 			int sequence = variables.get((location == 1) ? 0 : functionNumber).get(name);
@@ -243,73 +263,92 @@ public class UCodeGenListener extends MiniCBaseListener {
 
 			// assign
 			line.append(Keyword.LDI).append("\n");
-		} else if (isFunctionOperation(ctx)) { // IDENT '(' args ')'
+		} 
+		else if (isFunctionOperation(ctx)) { // IDENT '(' args ')'
 			line.append(Keyword.LDP);
 			line.append(newTexts.get(ctx.args()));
 			line.append(Keyword.CALL).append(ctx.IDENT());
-		} else if (isBracketOperation(ctx)) { // '(' expr ')'
+		} 
+		else if (isBracketOperation(ctx)) { // '(' expr ')'
 			line.append(newTexts.get(ctx.expr(0)));
-		} else if (isMultiplyOperation(ctx)) { // expr '*' expr
+		} 
+		else if (isMultiplyOperation(ctx)) { // expr '*' expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(newTexts.get(ctx.expr(1)));
 			line.append(Keyword.MULT).append("\n");
-		} else if (isDivideOperation(ctx)) { // expr '/' expr
+		} 
+		else if (isDivideOperation(ctx)) { // expr '/' expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(newTexts.get(ctx.expr(1)));
 			line.append(Keyword.DIV).append("\n");
-		} else if (isModularOperation(ctx)) { // expr '%' expr
+		} 
+		else if (isModularOperation(ctx)) { // expr '%' expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(newTexts.get(ctx.expr(1)));
 			line.append(Keyword.MOD).append("\n");
-		} else if (isAddOperation(ctx)) { // expr '+' expr
+		} 
+		else if (isAddOperation(ctx)) { // expr '+' expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(newTexts.get(ctx.expr(1)));
 			line.append(Keyword.ADD).append("\n");
-		} else if (isSubtractOperation(ctx)) { // expr '-' expr
+		} 
+		else if (isSubtractOperation(ctx)) { // expr '-' expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(newTexts.get(ctx.expr(1)));
 			line.append(Keyword.SUB).append("\n");
-		} else if (isEqualOperation(ctx)) { // expr EQ expr
+		} 
+		else if (isEqualOperation(ctx)) { // expr EQ expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(newTexts.get(ctx.expr(1)));
 			line.append(Keyword.EQ).append("\n");
-		} else if (isNotEqualOperation(ctx)) { // expr NE expr
+		} 
+		else if (isNotEqualOperation(ctx)) { // expr NE expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(newTexts.get(ctx.expr(1)));
 			line.append(Keyword.NE).append("\n");
-		} else if (isLessThanOperation(ctx)) { // expr '<' expr
+		} 
+		else if (isLessThanOperation(ctx)) { // expr '<' expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(newTexts.get(ctx.expr(1)));
 			line.append(Keyword.LT).append("\n");
-		} else if (isLessEqualOperation(ctx)) { // expr LE expr
+		} 
+		else if (isLessEqualOperation(ctx)) { // expr LE expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(newTexts.get(ctx.expr(1)));
 			line.append(Keyword.LE).append("\n");
-		} else if (isGreaterThanOperation(ctx)) { // expr '>' expr
+		} 
+		else if (isGreaterThanOperation(ctx)) { // expr '>' expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(newTexts.get(ctx.expr(1)));
 			line.append(Keyword.GT).append("\n");
-		} else if (isGreaterEqualOperation(ctx)) { // expr GE expr
+		}
+		else if (isGreaterEqualOperation(ctx)) { // expr GE expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(newTexts.get(ctx.expr(1)));
 			line.append(Keyword.GE).append("\n");
-		} else if (isNotOperation(ctx)) { // '!' expr
+		} 
+		else if (isNotOperation(ctx)) { // '!' expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(Keyword.NOTOP).append("\n");
-		} else if (isAndOperation(ctx)) { // expr AND expr
+		} 
+		else if (isAndOperation(ctx)) { // expr AND expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(newTexts.get(ctx.expr(1)));
 			line.append(Keyword.AND).append("\n");
-		} else if (isOrOperation(ctx)) { // expr OR expr
+		} 
+		else if (isOrOperation(ctx)) { // expr OR expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(newTexts.get(ctx.expr(1)));
 			line.append(Keyword.OR).append("\n");
-		} else if (isNegativeOperation(ctx)) { // '-' expr
+		} 
+		else if (isNegativeOperation(ctx)) { // '-' expr
 			line.append(newTexts.get(ctx.expr(0)));
 			line.append(Keyword.NEG).append("\n");
-		} else if (isPositiveOperation(ctx)) { // '+' expr
+		} 
+		else if (isPositiveOperation(ctx)) { // '+' expr
 			line.append(newTexts.get(ctx.expr(0)));
-		} else if (isIncreaseOperation(ctx)) { // '++' expr
+		} 
+		else if (isIncreaseOperation(ctx)) { // '++' expr
 			String name = ctx.expr(0).getText();
 			int location = findVariableLocation(name);
 			int sequence = variables.get((location == 1) ? 0 : functionNumber).get(name);
@@ -317,7 +356,8 @@ public class UCodeGenListener extends MiniCBaseListener {
 			line.append(Keyword.LOD).append(location + " ").append(sequence).append("\n");
 			line.append(Keyword.INC).append("\n");
 			line.append(Keyword.STR).append(location + " ").append(sequence);
-		} else if (isDecreaseOperation(ctx)) { // '--' expr
+		} 
+		else if (isDecreaseOperation(ctx)) { // '--' expr
 			String name = ctx.expr(0).getText();
 			int location = findVariableLocation(name);
 			int sequence = variables.get((location == 1) ? 0 : functionNumber).get(name);
@@ -325,12 +365,14 @@ public class UCodeGenListener extends MiniCBaseListener {
 			line.append(Keyword.LOD).append(location + " ").append(sequence).append("\n");
 			line.append(Keyword.DEC).append("\n");
 			line.append(Keyword.STR).append(location + " ").append(sequence);
-		} else if (isIdentOperation(ctx)) { // IDENT
+		} 
+		else if (isIdentOperation(ctx)) { // IDENT
 			String name = ctx.IDENT().getText();
 			int location = findVariableLocation(name);
 			int sequence = variables.get((location == 1) ? 0 : functionNumber).get(name);
 			line.append(Keyword.LOD).append(location + " ").append(sequence).append("\n");
-		} else if (isLiteralOperation(ctx)) { // LITERAL
+		} 
+		else if (isLiteralOperation(ctx)) { // LITERAL
 			line.append(Keyword.LDC).append(isNumeration(ctx.getText())).append("\n");
 		}
 
@@ -390,7 +432,6 @@ public class UCodeGenListener extends MiniCBaseListener {
 			line.append(Keyword.FJP).append(ifName).append("\n");
 			line.append(newTexts.get(ctx.stmt(0))).append("\n");
 			line.append(ifName).append(Keyword.SPACE[indentation(ifName)]).append(Keyword.NOP).append("\n");
-
 			line.append(newTexts.get(ctx.stmt(1)));
 		}
 
@@ -402,9 +443,8 @@ public class UCodeGenListener extends MiniCBaseListener {
 		StringBuilder line = new StringBuilder();
 
 		// RETURN ';'
-		if (ctx.getChildCount() == 2) {
+		if (ctx.getChildCount() == 2)
 			line.append(Keyword.RET);
-		}
 
 		// RETURN expr ';'
 		if (ctx.getChildCount() == 3) {
@@ -494,28 +534,31 @@ public class UCodeGenListener extends MiniCBaseListener {
 	private boolean isDecreaseOperation(MiniCParser.ExprContext ctx) {
 		return (ctx.getChildCount() == 2) && (ctx.getChild(0).getText().equals("--"));
 	}
-
-	private boolean isArrayOperation(MiniCParser.ExprContext ctx) {
-		return (ctx.getChildCount() == 4) && (ctx.getChild(1).getText().equals("["))
-				&& (ctx.getChild(3).getText().equals("]"));
-	}
-
-	private boolean isFunctionOperation(ParseTree parseTree) {
-		return (parseTree.getChildCount() == 4) && (parseTree.getChild(1).getText().equals("("))
-				&& (parseTree.getChild(3).getText().equals(")"));
-	}
-
-	private boolean isBracketOperation(MiniCParser.ExprContext ctx) {
-		return (ctx.getChildCount() == 3) && (ctx.getChild(0).getText().equals("("))
-				&& (ctx.getChild(2).getText().equals(")"));
-	}
-
+	
 	private boolean isIdentOperation(MiniCParser.ExprContext ctx) {
 		return (ctx.getChildCount() == 1) && (ctx.IDENT() != null);
 	}
 
 	private boolean isLiteralOperation(MiniCParser.ExprContext ctx) {
 		return (ctx.getChildCount() == 1) && (ctx.LITERAL() != null);
+	}
+
+	private boolean isArrayOperation(MiniCParser.ExprContext ctx) {
+		return (ctx.getChildCount() == 4) 
+				&& (ctx.getChild(1).getText().equals("["))
+				&& (ctx.getChild(3).getText().equals("]"));
+	}
+
+	private boolean isFunctionOperation(ParseTree parseTree) {
+		return (parseTree.getChildCount() == 4)
+				&& (parseTree.getChild(1).getText().equals("("))
+				&& (parseTree.getChild(3).getText().equals(")"));
+	}
+
+	private boolean isBracketOperation(MiniCParser.ExprContext ctx) {
+		return (ctx.getChildCount() == 3) 
+				&& (ctx.getChild(0).getText().equals("("))
+				&& (ctx.getChild(2).getText().equals(")"));
 	}
 
 	private String isNumeration(String value) {
@@ -532,11 +575,15 @@ public class UCodeGenListener extends MiniCBaseListener {
 	}
 
 	private int findVariableLocation(String name) {
+		// find current function variable
 		if (variables.get(functionNumber).containsKey(name))
 			return 2;
+		
+		// find global variable
 		if (variables.get(0).containsKey(name))
 			return 1;
 
+		// compile error
 		System.out.println("Compile error: " + name + " is undefined");
 		return 0;
 	}
