@@ -101,7 +101,7 @@ public class UCodeGenListener extends MiniCBaseListener {
 			String arrayName = ctx.IDENT().getText();
 			
 			++globalVariables;
-			line.append(Keyword.SYM).append("1 ").append(globalVariables + " ").append(arraySize).append("\n");
+			line.append(Keyword.SYM).append("1 ").append(globalVariables + " ").append(arraySize + 1).append("\n");
 			line.append(Keyword.LDA).append("1 ").append(globalVariables).append("\n");
 			line.append(Keyword.STR).append("1 ").append(globalVariables).append("\n");
 			
