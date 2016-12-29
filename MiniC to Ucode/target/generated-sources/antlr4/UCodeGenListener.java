@@ -416,6 +416,7 @@ public class UCodeGenListener extends MiniCBaseListener {
 	public void exitIf_stmt(MiniCParser.If_stmtContext ctx) {
 		StringBuilder line = new StringBuilder();
 		String ifName = Keyword.IF + ifs;
+		String ifOutName = Keyword.IFOUT + ifs;
 
 		// IF '(' expr ')' stmt
 		if (ctx.getChildCount() == 5) {
@@ -430,8 +431,10 @@ public class UCodeGenListener extends MiniCBaseListener {
 			line.append(newTexts.get(ctx.expr()));
 			line.append(Keyword.FJP).append(ifName).append("\n");
 			line.append(newTexts.get(ctx.stmt(0)));
+			line.append(Keyword.UJP).append(ifOutName).append("\n");
 			line.append(ifName).append(Keyword.SPACE[indentation(ifName)]).append(Keyword.NOP).append("\n");
 			line.append(newTexts.get(ctx.stmt(1)));
+			line.append(ifOutName).append(Keyword.SPACE[indentation(ifOutName)]).append(Keyword.NOP).append("\n");
 		}
 
 		newTexts.put(ctx, line.toString());
