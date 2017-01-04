@@ -106,8 +106,6 @@ public class UCodeGenListener extends MiniCBaseListener {
 			line.append(Keyword.STR).append("1 ").append(globalVariables).append("\n");
 			
 			variables.get(0).put(arrayName, globalVariables);
-			for (int index = 0; index < arraySize; index++)
-				variables.get(0).put(arrayName + "[" + index + "]", globalVariables++);
 		}
 
 		newTexts.put(ctx, line.toString());
@@ -209,8 +207,6 @@ public class UCodeGenListener extends MiniCBaseListener {
 			line.append(Keyword.STR).append("2 ").append(localVariables).append("\n");
 			
 			variables.get(functionNumber).put(arrayName, localVariables);
-			for (int index = 0; index < arraySize; index++)
-				variables.get(functionNumber).put(arrayName + "[" + index + "]", localVariables++);
 		}
 
 		newTexts.put(ctx, line.toString());
